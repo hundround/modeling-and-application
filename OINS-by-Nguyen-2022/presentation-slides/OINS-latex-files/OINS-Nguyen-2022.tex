@@ -1,0 +1,427 @@
+% !TEX encoding = UTF-8 Unicode
+\documentclass[
+10pt,
+aspectratio=169,
+]{beamer}
+\setbeamercovered{transparent=10}
+\usetheme[
+%  showheader,
+%  red,
+  purple,
+%  gray,
+%  graytitle,
+  colorblocks,
+%  noframetitlerule,
+]{Verona}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.15}
+\usepackage{mathrsfs}
+\usetikzlibrary{arrows,angles}
+\definecolor{uuuuuu}{rgb}{0.26666666666666666,0.26666666666666666,0.26666666666666666}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lipsum}
+\usepackage[dvipsnames]{xcolor}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Mac上使用如下命令声明隶书字体，windows也有相关方式，大家可自行修改
+\providecommand{\lishu}{\CJKfamily{zhli}}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\usepackage{tikz}
+\usetikzlibrary{fadings}
+%
+%\setbeamertemplate{sections/subsections in toc}[ball]
+\usepackage{xeCJK}
+\usepackage{listings}
+\usepackage{caption}
+\usepackage{subfigure}
+\usefonttheme{professionalfonts}
+\def\mathfamilydefault{\rmdefault}
+\usepackage{amsmath}
+\usepackage{multirow}
+\usepackage{booktabs}
+\usepackage{bm}
+\setbeamertemplate{section in toc}{\hspace*{1em}\inserttocsectionnumber.~\inserttocsection\par}
+\setbeamertemplate{subsection in toc}{\hspace*{2em}\inserttocsectionnumber.\inserttocsubsectionnumber.~\inserttocsubsection\par}
+\setbeamerfont{subsection in toc}{size=\small}
+\AtBeginSection[]{%
+	\begin{frame}%
+		\frametitle{Outline}%
+		\textbf{\tableofcontents[currentsection]} %
+	\end{frame}%
+}
+
+\AtBeginSubsection[]{%
+	\begin{frame}%
+		\frametitle{Outline}%
+		\textbf{\tableofcontents[currentsection, currentsubsection]} %
+	\end{frame}%
+}
+
+\title{Deep learned one-iteration nonlinear solver for solid mechanics}
+\author[Orapa, Dan Mark]{Tan N. Nguyen, Jaehong Lee, Liem Dinh-Tien, Minh Dang}
+\date{\today}
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% ----------- 标题页 ------------
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+\begin{document}
+
+\maketitle
+
+%%% define code
+\defverbatim[colored]\lstI{
+	\begin{lstlisting}[language=C++,basicstyle=\ttfamily,keywordstyle=\color{red}]
+	int main() {
+	// Define variables at the beginning
+	// of the block, as in C:
+	CStash intStash, stringStash;
+	int i;
+	char* cp;
+	ifstream in;
+	string line;
+	[...]
+	\end{lstlisting}
+}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% ----------- FRAME ------------
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Abstract}
+\begin{frame}{Abstract}
+    Nowadays, there are a lot of iterative algorithms which have been proposed for nonlinear problems of solid mechanics. The existing biggest drawback of iterative algorithms is the requirement of numerous iterations and computation to solve these problems. This can be found clearly when the large or complex problems with thousands or millions of degrees of freedom are solved. To overcome completely this difficulty, the novel one-iteration nonlinear solver (OINS) using time series prediction and the modified Riks method (M-R) is proposed in this paper. 
+\end{frame}
+\begin{frame}{Abstract}
+    OINS is established upon the core idea as follows: (1) Firstly, we predict the load factor increment and the displacement vector increment and the convergent solution of the considering load step via the predictive networks which are trained by using the load factor and the displacement vector increments of the previous convergence steps and group method of data handling (GMDH);(2) Thanks to the predicted convergence solution of the load step is very close to or identical with the real one, the prediction phase used in any existing nonlinear solvers is eliminated completely in OINS. Next, the correction phase of the M-R is adopted and the OINS iteration is started at the predicted convergence point to reach the convergent solution. The training process and the applying process of GMDH are continuously conducted and repeated during the nonlinear analysis in order to predict the convergence point at the beginning of each load step. Through numerical investigations, we prove that OINS is powerful, highly accurate and only needs about one iteration per load step. Thus, OINS significantly saves number of iterations and a huge amount of computation compared with the conventional methods. Especially, OINS not only can detect limit, inflection, and other special points but also can predict exactly various types of instabilities of structures.
+\end{frame}
+\subsection{Background and Gap Statement}
+\begin{frame}[c]{Background} 
+    Nowadays, there are a lot of \textcolor{teal}{iterative algorithms} which have been proposed for nonlinear problems of solid mechanics. The existing biggest drawback of iterative algorithms is the requirement of numerous iterations and computation to solve these problems. This can be found clearly when the large or complex problems with thousands or millions of degrees of freedom are solved.
+\end{frame}
+\begin{frame}{Nonlinear analysis of Isotropic Shells using First-order shell Deformation Theory (FSDT)}
+    The study will evaluate the efficiency and reliability of OINS in \textcolor{teal}{solid mechanics} via geometrically nonlinear analysis of shells using FSDT. The strain vectors using FSDT are expressed by:
+    \begin{align*}
+        \varepsilon &= \{\varepsilon_{xx},\: \varepsilon_{yy},\: \gamma_{xy}\}^T = \varepsilon_0 + z\kappa_b \\
+        \gamma &= \{\gamma_{xz},\: \gamma_{yz}\}^T = \varepsilon_s,
+    \end{align*} \pause
+    with
+    \begin{align*}
+        &\varepsilon_0 = \varepsilon_L + \varepsilon_N;\:\varepsilon_L = \left\{
+        \begin{matrix}
+            u_{0,x}+w_0/R \\
+            \nu_{0,y} \\
+            u_{0,y}+\nu_{0,x}
+        \end{matrix}
+        \right\}; \: \varepsilon_N = \dfrac{1}{2}\left\{
+        \begin{matrix}
+            w_{0,x}^2 \\
+            w_{0,y}^2 \\
+            2w_{0,xy}
+        \end{matrix}
+        \right\} \\
+        &\kappa_b = \left\{
+        \begin{matrix}
+            \beta_{x,x} \\
+            \beta_{y,y} \\
+            \beta_{x,y} + \beta_{y,x}
+        \end{matrix}
+        \right\};\: \varepsilon_s = \left\{
+        \begin{matrix}
+            -u_0/R + w_{0,x} + \beta_x \\ 
+            w_{0,y} + \beta_y
+         \end{matrix}
+        \right\}
+    \end{align*}
+\end{frame}
+\begin{frame}{Nonlinear analysis of Isotropic Shells using First-order shell Deformation Theory (FSDT)}
+    and we denote \(\Omega\) to be the initial configuration of the shell. At a specific application, i.e. focusing on the istropic shell of FSDT, NURBS basis function \(N_A\) is utilized. The study entitled "NURBS-based postbuckling analysis of functionally graded carbon nanotube-reinforced composite shells" thoroughly discussed the derivation of shell formulation based on NURBS.
+\end{frame}
+\begin{frame}[c]{FSDT on the Nonlinear Isogeometric Analysis of Shells}
+    At the \(i\)th iteration and \(m\)th load increment, the system of incremental equation is expressed as
+    \begin{block}{The FG-CNTRC Shell Formulation based on NURBS}
+        $$K_T(q_m)\Delta^iq_m =\:^iF_{\text{ext},m} -\: ^iF_{\text{int},m}$$
+    \end{block} \pause
+    where 
+    \begin{align*}
+        K_T = &\int_{\Omega}\left[
+        \left\{
+        \begin{matrix}
+            B_A^L \\ B_A^b \\ B_A^s
+        \end{matrix}
+        \right\}
+        +
+        \left\{
+        \begin{matrix}
+            B_A^N \\ 0 \\ 0
+        \end{matrix}
+        \right\}
+        \right]^T
+        \begin{bmatrix}
+            D^p & 0 & 0 \\
+            0 & D^b & 0 \\
+            0 & 0 & D^s
+        \end{bmatrix}
+        \left[
+        \left\{
+        \begin{matrix}
+            B_A^L \\ B_A^b \\ B_A^s
+        \end{matrix}
+        \right\}
+        +
+        \left\{
+        \begin{matrix}
+            B_A^N \\ 0 \\ 0
+        \end{matrix}
+        \right\}
+        \right]d\Omega
+        \\ &+\int_{\Omega} \left(B^g_A\right)^T
+    \begin{bmatrix}
+        N_x & N_{xy} \\[2pt]
+        N_{xy} & N_y
+    \end{bmatrix}B^g_Ad\Omega
+    \end{align*}  
+\end{frame}
+\begin{frame}{FC-CNTRC based on NURBS Basis Function}
+    Derivation of the equation is based on the related literature from the same author detailing the NURBS basis functions. We have
+    \pause 
+    \begin{align*}
+        B_A^L &= \begin{bmatrix}
+            N_{A,x} & 0 & \frac{1}{R}N_A & 0 & 0 \\ 
+            0 & N_{A,y} & 0 & 0 & 0 \\
+            N_{A,y} & N_{A,x} & 0 & 0 & 0 \\
+        \end{bmatrix};\quad 
+        B_A^b = \begin{bmatrix}
+            0 & 0 & 0 & N_{A,x} & 0 \\
+            0 & 0 & 0 & 0 & N_{A,y} \\ 
+            0 & 0 & 0 & N_{A,y} & N_{A,x}
+        \end{bmatrix}
+        \\\vspace{0.1in}
+        B_A^s &= \begin{bmatrix}
+            -\frac{1}{R}N_A & 0 & N_{A,x} & N_A & 0 \\ 
+            0 & 0 & N_{A,y} & 0 & N_A
+        \end{bmatrix}
+    \end{align*}
+    \pause
+    and
+    \begin{align*}
+        B_A^N = AB_A^g = \begin{bmatrix}
+            w_{0,x} & 0 \\
+            0 & w_{0,y} \\ 
+            w_{0,y} & w_{0,x}
+        \end{bmatrix}
+        \begin{bmatrix}
+            0 & 0 & N_{A,x} & 0 & 0 \\
+            0 & 0 & N_{A,y} & 0 & 0
+        \end{bmatrix}
+    \end{align*}
+    where \(w_0\) is the radial deflector of the panel. 
+\end{frame}
+\begin{frame}{FSDT on the Nonlinear Isogeometric Analysis of Shells}
+    \begin{block}{The FG-CNTRC Shell Formulation based on NURBS}
+        $$K_T(q_m)\Delta^iq_m =\:^iF_{\text{ext},m} -\: ^iF_{\text{int},m}$$
+    \end{block}
+    where at the \(i\)th iteration and \(m\)th load increment
+    \begin{itemize}
+        \item \(q_m\) is the displacement vector \pause
+        \item \(\Delta^iq_m\) is the change in load vector \pause
+        \item \(^iF_{\text{ext},m}\) is the load vector \pause
+        \item \(^iF_{\text{int},m}\) is the internal force
+    \end{itemize}
+\end{frame}
+\begin{frame}{FSDT on the Nonlinear Isogeometric Analysis of Shells}
+    Using the novel OINS to solve nonlinear equation, for any load increments, an iterative process is conducted and will stop when the convergence criterion \(e\) is met as follows
+
+    \begin{block}{Convergence Criterion \(e\)}
+        $$ e = \dfrac{\Vert ^i\lambda_m F_0 - \:^iF_{\text{int},m}\Vert}{\Vert (^i\lambda_m + \Delta^i\lambda_m)F_0\Vert} < 10^{-3}$$
+    \end{block} \pause
+    where \(\lambda\) is denoted as the load factor.
+\end{frame}
+\begin{frame}{Convergence on Iterative Process}
+    Note that the load vector at \(i\)the iteration and \(m\)th load increment
+    \begin{align}
+        ^iF_{\text{ext},m} = \left(^i\lambda_m + \Delta^i\lambda_m\right)\int_{\Omega}f_0\left\{
+        \begin{matrix}
+            0 & 0 & N_A & 0 & 0
+        \end{matrix}
+        \right\}^Td\Omega
+        = \left(^i\lambda_m + \Delta^i\lambda_m\right)F_0
+    \end{align}
+    where \(F_0\) denotes the referenced load vector while \(N_A\) stands for the NURBS (nonuniform rational B-spline) basic function.
+\end{frame}
+\begin{frame}{Convergence on Iterative Process}
+    The load factor \(\lambda\) and the displacement vector \(q\) of the iteration are updated as follows
+    \begin{align*}
+        ^{i+1}\lambda_m &= ^i\lambda_m + \Delta^i\lambda_m \\
+        ^{i+1}q_m &= \:^iq_m + \Delta^iq_m \\
+        \Delta^iq_m &= \Delta^iq_{R,m} + \Delta^i\lambda_mq_{F,m}
+    \end{align*} \pause
+    Moreover, \(q_{F,m}\) and \(\Delta^iq_{R,m}\) respectively denote the displacement created by the reference vector and the change caused by the residual load vectors and that
+    \begin{align}
+        \Delta^iq_{R,m} &= [K_T(q_m)]^{-1}\left(^i\lambda_m F_0 - \:^iF_{\text{int},m}\right) \\
+        q_{F,m} &= [K_T(q_m)]^{-1}F_0
+    \end{align}
+    \pause
+    Recall that $K_T(q_m)\Delta^iq_m =\:^iF_{\text{ext},m} -\: ^iF_{\text{int},m}$.
+\end{frame}
+\begin{frame}{Convergence on Iterative Process}
+    Rewriting equations (2), we have
+    \begin{align}
+        K_T(q_m)\Delta^iq_{R,m} &= \left(^i\lambda_m F_0 - \:^iF_{\text{int},m}\right) 
+    \end{align} \pause
+    then we can rewrite the convergence criterion \(e\) as follows
+    \begin{align*}
+        e &= \dfrac{\Vert ^i\lambda_m F_0 - \:^iF_{\text{int},m}\Vert}{\Vert (^i\lambda_m + \Delta^i\lambda_m)F_0\Vert}\\
+        &= \dfrac{\Vert K_T(q_m)\Delta^iq_{R,m}\Vert}{\Vert ^iF_{\text{ext},m}\Vert} \quad [1,4]
+    \end{align*} \pause
+    
+\end{frame}
+\subsection{Goals/Aims}
+\begin{frame}[c]{Goals/Aims}
+    To overcome completely this difficulty, the novel one-iteration nonlinear solver (OINS) using time series prediction and the modified Riks method (M-R) is proposed in this paper.
+\end{frame}
+\begin{frame}[c]{Goals/Aims}
+    To overcome completely this difficulty, the \textcolor{teal}{novel one-iteration nonlinear solver (OINS)} using time series prediction and the \textcolor{red}{modified Riks method (M-R)} is proposed in this paper.
+\end{frame}
+\begin{frame}[c]{Modifield Riks (M-R) Method}
+    The \textbf{Modified Riks (M-R) Method} is a nonlinear problem solver that uses iterative process to come up to the converging solution.
+\end{frame}
+\begin{frame}[c]{Modifield Riks (M-R) Method}
+    \begin{figure}
+        \centering
+        \includegraphics[width=0.6\linewidth]
+        {BeamerTemplateforBUCT/Figures/Modified Riks Method.png}
+        \caption{M-R Method (Nguyen, 2021)}
+        \label{fig:enter-label}
+    \end{figure}
+\end{frame}
+\begin{frame}[c]{One-iteration Nonlinear Solver (OINS)}
+    The \textbf{One-iteration Nonlinear Solver} is the proposed solver of the study that is developed from the M-R method implemented with the \textcolor{teal}{Group Method of Data Handling (GMDH)}
+\end{frame}
+\begin{frame}[c]{One-iteration Nonlinear Solver}
+    \begin{figure}
+        \centering
+        \includegraphics[width=0.55\linewidth]{BeamerTemplateforBUCT/Figures/OINS Method.png}
+        \caption{OINS (Nguyen, 2021)}
+        \label{fig:enter-label}
+    \end{figure}
+\end{frame}
+\begin{frame}{OINS-GMDH Training Data}
+    \begin{figure}
+        \centering
+        \includegraphics[width=0.5\linewidth]{BeamerTemplateforBUCT/Figures/OINS 8th Iteration.png}
+        \caption{Train Network for GMDH}
+        \label{fig:enter-label}
+    \end{figure}
+\end{frame}
+\subsection{Methodology}
+\begin{frame}{Methodology}
+    OINS is established upon the core idea as follows: (1) Firstly, we predict the load factor increment and the displacement vector increment and the convergent solution of the considering load step via the predictive networks which are trained by using the load factor and the displacement vector increments of the previous convergence steps and group method of data handling (GMDH);(2) Thanks to the predicted convergence solution of the load step is very close to or identical with the real one, the prediction phase used in any existing nonlinear solvers is eliminated completely in OINS. Next, the correction phase of the M-R is adopted and the OINS iteration is started at the predicted convergence point to reach the convergent solution. The training process and the applying process of GMDH are continuously conducted and repeated during the nonlinear analysis in order to predict the convergence point at the beginning of each load step.
+\end{frame}
+\begin{frame}{Methodology}
+    OINS is established upon the core idea as follows: (1) Firstly, we predict the \textcolor{teal}{load factor increment} and the \textcolor{teal}{displacement vector increment} and the \textcolor{teal}{convergent solution} of the considering load step via the predictive networks which are trained by using the load factor and the displacement vector increments of the previous convergence steps and \textcolor{teal}{group method of data handling (GMDH)};\textcolor{lightgray}{(2) Thanks to the predicted convergence solution of the load step is very close to or identical with the real one, the prediction phase used in any existing nonlinear solvers is eliminated completely in OINS. Next, the correction phase of the M-R is adopted and the OINS iteration is started at the predicted convergence point to reach the convergent solution. The training process and the applying process of GMDH are continuously conducted and repeated during the nonlinear analysis in order to predict the convergence point at the beginning of each load step.}
+\end{frame}
+\begin{frame}{Group Method of Data Handling}
+    The Group Method of Data Handling (GMDH) is a self-organizing deep learning method which is commonly and widely used for time series prediction problems. During the training stages, the number of neurons of GMDH networks continuously changes to improve the performance of the network.
+
+    \begin{figure}
+        \centering
+        \includegraphics[width=0.5\linewidth]{BeamerTemplateforBUCT/Figures/GMDH Training.png}
+        \caption{Training Process of GMDH}
+        \label{fig:enter-label}
+    \end{figure}
+\end{frame}
+\begin{frame}{Methodology}
+    \textcolor{lightgray}{OINS is established upon the core idea as follows: (1) Firstly, we predict the load factor increment and the displacement vector increment and the convergent solution of the considering load step via the predictive networks which are trained by using the load factor and the displacement vector increments of the previous convergence steps and group method of data handling (GMDH);}(2) Thanks to the predicted convergence solution of the load step is very close to or identical with the real one, the prediction phase used in any existing nonlinear solvers is eliminated completely in OINS. Next, the correction phase of the M-R is adopted and the OINS iteration is started at the predicted convergence point to reach the convergent solution. The training process and the applying process of GMDH are continuously conducted and repeated during the nonlinear analysis in order to predict the convergence point at the beginning of each load step.
+\end{frame}
+\subsection{Results and Conclusion}
+\begin{frame}{Results and Conclusion}
+    Through numerical investigations, we prove that OINS is powerful, highly accurate and only needs about one iteration per load step. Thus, OINS significantly saves number of iterations and a huge amount of computation compared with the conventional methods.
+\end{frame}
+\begin{frame}{The Star Players}
+    The study compared the three nonlinear problem solvers namely:
+    \begin{enumerate}
+        \item The M-R Method
+        \item \textcolor{teal}{The Data-driven Nonlinear Solver (DDNS) Method}
+        \item The OINS Method
+    \end{enumerate}
+    The study conducted an iterative comparison between these solvers showing their efficiency in solving nonlinear problem. 
+\end{frame}
+\begin{frame}{The DDNS Method}
+    Data-driven Nonlinear Solver has been developed recently to reduce the number of iterations of nonlinear problems by having the same idea to that of OINS method: \textcolor{teal}{predict}. \pause \\
+    The difference between DDNS and OINS? The DDNS predicts the new starting point closer to the convergent solution while OINS predicts the converging solution which cuts a large iteration in the whole process.
+    \begin{figure}
+        \centering
+        \includegraphics[width=0.5\linewidth]{BeamerTemplateforBUCT/Figures/DDNS vs OINS.png}
+        \label{fig:enter-label}
+    \end{figure}
+
+    The DDNS method is thoroughly discussed in the study entitled "A novel data-driven nonlinear solver for solid mechanics using time series forecasting."
+\end{frame}
+\begin{frame}{The Star Players}
+    As a result, the study has shown that the OINS method was 77-80\% faster than the M-R method and DDNS, based on literature, is 40-50\% faster than M-R method.
+
+    \begin{figure}
+        \centering
+        \includegraphics[width=0.5\linewidth]{BeamerTemplateforBUCT/Figures/OINS vs DDNS vs MR.png}
+        \label{fig:enter-label}
+    \end{figure}
+\end{frame}
+\begin{frame}{M-R vs OINS, continued}
+    The Modified Riks and OINS method were tested using the problem of cylindrical panel.
+
+    \begin{figure}
+        \centering
+        \includegraphics[width=0.5\linewidth]{BeamerTemplateforBUCT/Figures/Cylindrical hinged panel under a point load.png}
+        \caption{Cylindrical hinged panel under a point load \(P\)}
+        \label{fig:enter-label}
+    \end{figure}
+\end{frame}
+\begin{frame}{M-R vs OINS, continued}
+Central deflection of a hinged panel with \(h = 25.4 mm, B = 508 mm, L = B\)
+    \begin{figure}[h]
+    \centering
+    \subfigure{
+    \includegraphics[scale=0.3]{BeamerTemplateforBUCT/M-R vs OINS 1 fig.png}
+    }
+    \hspace{1 pt}
+    \subfigure{
+    \includegraphics[scale=0.4,centered]{BeamerTemplateforBUCT/M-R vs OINS 1.png}
+    }
+    \end{figure}
+\end{frame}
+\begin{frame}{M-R vs OINS, continued}
+Central deflection of a hinged panel with \(h = 6.35 mm, B = 508 mm, L = B\)
+    \begin{figure}[h]
+    \centering
+    \subfigure{
+    \includegraphics[scale=0.25]{BeamerTemplateforBUCT/M-R vs OINS 2 fig.png}
+    }
+    \hspace{1 pt}
+    \subfigure{
+    \includegraphics[scale=0.45,centered]{BeamerTemplateforBUCT/M-R vs OINS 2 .png}
+    }
+    \end{figure}
+\end{frame}
+\subsection{Implications}
+\begin{frame}{Impications}
+    Especially, OINS not only can detect limit, inflection,
+and other special points but also can predict exactly various types of instabilities of structures
+\end{frame}
+\begin{frame}{Research Problem}
+    It was noted that the solvers were applied to nonlinear problems in solid mechanics using the First-order Sheer Deformation Theory analysis of shells by the strain vectors. Given that the OINS method is proved to be efficient and accurate, we will attempt to apply the method to solve nonlinear problems in fluid mechanics by finding a set of parameters and equations that can be used in finite element analysis using OINS. Moreover, if possible, we will try to implement other deep learning method for time series prediction that might eliminate the corrective phase of the OINS method. 
+\end{frame}
+\begin{frame}{BibTex}
+    \cite{Nguyen1} Data-driven Nonlinear Solver\\
+    \cite{Nguyen2} NURBS-based postbuckling analysis.
+\end{frame}
+\begin{frame}{References}
+\bibliographystyle{abbrv}
+\bibliography{References}
+\end{frame}
+\end{document}
