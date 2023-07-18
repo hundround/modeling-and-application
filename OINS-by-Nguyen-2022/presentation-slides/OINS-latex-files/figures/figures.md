@@ -1,0 +1,1 @@
+The following figures attached here are from the study "Deep learned one-iteration nonlinear solver for solid mechanics" and the uploader does not own any of the results shown.
